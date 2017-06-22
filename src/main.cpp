@@ -14,7 +14,7 @@
  ***************************************************
  Set N and dt. - OK
  Fit the polynomial to the waypoints. OK
- Calculate initial cross track error and orientation error values.
+ Calculate initial cross track error and orientation error values. - OK
  Define the components of the cost function (state, actuators, etc). 
  You may use the methods previously discussed or make up something, up to you!
  Define the model constraints. These are the state update equations defined in the Vehicle Models module.
@@ -45,10 +45,10 @@ string hasData(string s) {
 }
 
 // Evaluate a polynomial.
-double polyeval(Eigen::VectorXd coeffs, double x) {
+double polyeval(Eigen::VectorXd param, double x) {
   double result = 0.0;
-  for (int i = 0; i < coeffs.size(); i++) {
-    result += coeffs[i] * pow(x, i);
+  for (int i = 0; i < param.size(); i++) {
+    result += param[i] * pow(x, i);
   }
   return result;
 }
@@ -104,15 +104,9 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
-          /*
-          * TODO: Calculate steering angle and throttle using MPC.
-            *
-          * Both are in between [-1, 1].
-          *
-          */
 
-          Eigen::VectorXd state(4);
-          Eigen::VectorXd next_state(4);
+          Eigen::VectorXd state(6);
+          Eigen::VectorXd next_state(6);
           Eigen::VectorXd xvals(ptsx.size());
           Eigen::VectorXd yvals(ptsy.size());
           Eigen::VectorXd param;
@@ -125,36 +119,58 @@ int main() {
           for (int i=0; i<ptsx.size(); i++){
             // Translation from map reference to car's reference
 
-            ptsx_transf.push_back((ptsx[i]-px)*cos(psi) - (ptsy[i]-py)*sin(0-psi));
-            ptsy_transf.push_back((ptsx[i]-px)*sin(0-psi) + (ptsy[i]-py)*cos(psi));
-            xvals[i] = ptsx[i];
-            yvals[i] = ptsy[i];
+            ptsx_transf.push_back((ptsx[i]-px)*cos(0-psi) - (ptsy[i]-py)*sin(0-psi));
+            ptsy_transf.push_back((ptsx[i]-px)*sin(0-psi) + (ptsy[i]-py)*cos(0-psi));
+            xvals[i] = (ptsx[i]-px)*cos(0-psi) - (ptsy[i]-py)*sin(0-psi);
+            yvals[i] = (ptsx[i]-px)*sin(0-psi) + (ptsy[i]-py)*cos(0-psi);
             
           }
+
+          //double* ptrx = &ptsx[0];
+          //double* ptry = &ptsy[0];
+
+          //Eigen::Map<Eigen::VectorXd> 
+
 
           param = polyfit(xvals, yvals, 3);
 
           double eval_py = polyeval(param, px);
-          double psi_unity = j[1]["psi_unity"];          
-          double cte = eval_py - py;
-          double epsi = psi - psi_unity;
+          double psi_unity = j[1]["psi_unity"];
+
+          // PREDICTED CTE AND EPSI          
+          double cte = polyeval(param, 0);
+          double epsi = -atan(param[1]);
           
+
+
           std::cout << "cte/epsi: "<< cte << "/" << epsi << std::endl;
+
           
+          double steer_value = j[1]["steering_angle"];
+          double throttle_value = j[1]["throttle"];
 
-
-          state << px, py, psi, v;
+          state << 0, 0, 0, v, cte, epsi;
           
+          
+          /*
+          * TODO: Calculate steering angle and throttle using MPC.
+            *
+          * Both are in between [-1, 1].
+          *
+          */
 
 
-          double steer_value;
-          double throttle_value;
+          auto vars = mpc.Solve(state, param);
+          
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
-          msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = throttle_value;
+
+          double Lf = 2.67;
+
+          msgJson["steering_angle"] = vars[0]/(deg2rad(25)*Lf);
+          msgJson["throttle"] = vars[1];
 
           //Display the MPC predicted trajectory 
           vector<double> mpc_x_vals;
@@ -173,11 +189,19 @@ int main() {
           vector<double> next_x_vals;
           vector<double> next_y_vals;
 
+          double poly_inc = 2.5;
+          int num_points = 25;
+          for (int i=1; i < num_points; i++){
+            next_x_vals.push_back(poly_inc*i);
+            next_y_vals.push_back(polyeval(param,poly_inc*i));
+          }
+
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
+
 
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";

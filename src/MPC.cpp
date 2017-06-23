@@ -6,7 +6,7 @@
 using CppAD::AD;
 
 // TODO: Set the timestep length and duration
-size_t N = 25;
+size_t N = 5;
 double dt = 0.05;
 
 // This value assumes the model presented in the classroom is used.
@@ -20,7 +20,7 @@ double dt = 0.05;
 //
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
-const double ref_v = 100;
+const double ref_v = 40;
 
 size_t x_start = 0;
 size_t y_start = x_start + N;
@@ -47,21 +47,26 @@ class FG_eval {
     // TODO: Define the cost related the reference state and
     // any anything you think may be beneficial.
      for (int t = 0; t < N; t++) {
-      fg[0] += 2000*CppAD::pow(vars[cte_start + t], 2);
-      fg[0] += 2000*CppAD::pow(vars[epsi_start + t], 2);
-      fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
+      // how acceptable cte - the lower the farther from 0 error
+      fg[0] += 300*CppAD::pow(vars[cte_start + t], 2);
+      // how acceptable epsi - the lower the farther from 0 error
+      fg[0] += 600*CppAD::pow(vars[epsi_start + t], 2);
+      // speed target - the higher the lower it strays from the center
+      fg[0] += 5*CppAD::pow(vars[v_start + t] - ref_v, 2);
     }
 
     // Minimize the use of actuators.
     for (int t = 0; t < N - 1; t++) {
-      fg[0] += 15*CppAD::pow(vars[delta_start + t], 2);
-      fg[0] += 15*CppAD::pow(vars[a_start + t], 2);
+      // steering speed - the higher the lower steering
+      fg[0] += 8000*CppAD::pow(vars[delta_start + t], 2);
+      // Acceleration - the lower the faster
+      fg[0] += 10*CppAD::pow(vars[a_start + t], 2);
     }
 
     // Minimize the value gap between sequential actuations.
     for (int t = 0; t < N - 2; t++) {
-      fg[0] += 500*CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
-      fg[0] += 10*CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
+      fg[0] += CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
+      fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
     }
     //
     // Setup Constraints

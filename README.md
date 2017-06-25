@@ -16,10 +16,15 @@ The first part of the model describe the state of car, which should be enough to
 Vector:  [x, y, psi, v, cte, epsi]
 
 x - x coordinate position [m]
+
 y - y coordinate position [m]
+
 psi - current angle [rad]
+
 v - velocity  [m/s]
+
 cte - cross track error [m]
+
 epsi - error for current angle [rad]
 
 ### Actuators
@@ -34,19 +39,25 @@ a - acceleration, which is reponsible for changing velocity [m/s²]
 ### Update State
 
 As mentioned before, designing the model of the system is the key for good prediction. The update state equation for the bycicle model is given below:
-
+```
 x' = x + v * cos(psi) * dt
-y' = y + v * sin(psi) * dt
-psi' = psi + (v / Lf) * delta * dt
-v' = v + a * dt
-cte'= cte + v * sin(epsi) * dt;
-epsi'= epsi + v * delta / Lf * dt
 
+y' = y + v * sin(psi) * dt
+
+psi' = psi + (v / Lf) * delta * dt
+
+v' = v + a * dt
+
+cte'= cte + v * sin(epsi) * dt;
+
+epsi'= epsi + v * delta / Lf * dt
+```
 where:
 
+```
   dt - time variation
   Lf - distance between car's gravity center and it's front limit. This parameter implies in an lower turn rate for longer cars.
-
+```
 ---
 
 ## Dependencies

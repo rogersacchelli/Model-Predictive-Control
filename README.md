@@ -1,5 +1,51 @@
-# CarND-Controls-MPC
-Self-Driving Car Engineer Nanodegree Program
+# Model Predictive Control
+
+## Introduction
+
+Model predictive controllers rely on dynamic models of the process, most often linear empirical models obtained by system identification.
+MPC has the ability to anticipate future events and can take control actions accordingly. PID and LQR controllers do not have this predictive ability. 
+
+## Model Definition
+
+The current work implemented a knematic version of the bycicle model to mimic car's movement.
+
+### State
+
+The first part of the model describe the state of car, which should be enough to describe the car's position and error information at determined instant t:
+
+Vector:  [x, y, psi, v, cte, epsi]
+
+x - x coordinate position [m]
+y - y coordinate position [m]
+psi - current angle [rad]
+v - velocity  [m/s]
+cte - cross track error [m]
+epsi - error for current angle [rad]
+
+### Actuators
+
+To complete the model definition, we describe the actuators. Actuators are responsible for changing the car's state. For example change car's velocity or angle.
+
+Actuator: [delta, a]
+
+delta - angle velocity, which in this case is associated to steering angle [rad/s]
+a - acceleration, which is reponsible for changing velocity [m/s²]
+
+### Update State
+
+As mentioned before, designing the model of the system is the key for good prediction. The update state equation for the bycicle model is given below:
+
+x' = x + v * cos(psi) * dt
+y' = y + v * sin(psi) * dt
+psi' = psi + (v / Lf) * delta * dt
+v' = v + a * dt
+cte'= cte + v * sin(epsi) * dt;
+epsi'= epsi + v * delta / Lf * dt
+
+where:
+
+  dt - time variation
+  Lf - distance between car's gravity center and it's front limit. This parameter implies in an lower turn rate for longer cars.
 
 ---
 
